@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 18 16:00:49 2026
+
+@author: Samet
+"""
+
 import streamlit as st
 import json
 import fitz  # PyMuPDF
@@ -57,7 +64,7 @@ def bom_pdf_oku(client, resim):
     - Adetleri 'Quantity' veya 'Piece' sütunundan al.
     """
     response = client.models.generate_content(
-        model='gemini-3.6-flash', # Model ismi güncellendi
+        model='gemini-3.6-flash',
         contents=[resim, prompt],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -110,9 +117,9 @@ if st.button("Analizi Başlat", type="primary"):
         # ADIM 1: BOM PDF'lerini İşleme
         with st.status("Adım 1: BOM Listeleri İşleniyor...", expanded=True) as status:
             for dosya in bom_dosyalari:
-                try:
-                    doc = fitz.open(stream=dosya.read(), filetype="pdf")
-                    for sayfa_idx in range(len(doc)):
+                doc = fitz.open(stream=dosya.read(), filetype="pdf")
+                for sayfa_idx in range(len(doc)):
+                    try:
                         resim = sayfa_resme_cevir(doc.load_page(sayfa_idx))
                         bom_yaniti = bom_pdf_oku(client, resim)
                         
@@ -121,8 +128,10 @@ if st.button("Analizi Başlat", type="primary"):
                             adet = satir.get("kullanim_adedi", 1)
                             if ciz_no:
                                 montaj_carpanlari[ciz_no.strip()] = adet
-                except Exception as e:
-                    st.error(f"BOM Hatası ({dosya.name}): {e}")
+                                
+                        time.sleep(0.2) # API istek limitini dengeler
+                    except Exception as e:
+                        st.error(f"BOM Hatası ({dosya.name} - Sayfa {sayfa_idx + 1}): {e}")
             
             st.write(f"Bulunan alt montaj referansları: {len(montaj_carpanlari)} adet")
             status.update(label="Adım 1 Tamamlandı!", state="complete", expanded=False)
@@ -133,14 +142,23 @@ if st.button("Analizi Başlat", type="primary"):
             toplam_cizim = len(cizim_dosyalari)
             
             for idx, dosya in enumerate(cizim_dosyalari):
-                try:
-                    st.write(f"İşleniyor: {dosya.name}")
-                    doc = fitz.open(stream=dosya.read(), filetype="pdf")
-                    for sayfa_idx in range(len(doc)):
+                st.write(f"İşleniyor: {dosya.name}")
+                doc = fitz.open(stream=dosya.read(), filetype="pdf")
+                son_bilinen_cizim_no = "" # Sayfalar arası çizim numarası hafızası
+                
+                for sayfa_idx in range(len(doc)):
+                    try:
                         resim = sayfa_resme_cevir(doc.load_page(sayfa_idx))
                         ai_yaniti = cizim_pdf_oku(client, resim)
                         
                         cizim_no = ai_yaniti.get("cizim_numarasi", "")
+                        
+                        # Çizim numarası hafızası mantığı: Bu sayfada yoksa öncekini kullan
+                        if not cizim_no and son_bilinen_cizim_no:
+                            cizim_no = son_bilinen_cizim_no
+                        elif cizim_no:
+                            son_bilinen_cizim_no = cizim_no
+                            
                         malzemeler = ai_yaniti.get("malzemeler", [])
                         carpan = montaj_carpanlari.get(cizim_no, 1)
                         
@@ -163,10 +181,12 @@ if st.button("Analizi Başlat", type="primary"):
                                 "weight_kg": malzeme.get("weight_kg")
                             }
                             tum_veriler.append(malzeme_verisi)
-                    
-                    ilerleme_cizgisi.progress((idx + 1) / toplam_cizim)
-                except Exception as e:
-                    st.error(f"Çizim Hatası ({dosya.name}): {e}")
+                            
+                        time.sleep(0.2) # API istek limitini dengeler
+                    except Exception as e:
+                        st.error(f"Çizim Hatası ({dosya.name} - Sayfa {sayfa_idx + 1}): {e}")
+                
+                ilerleme_cizgisi.progress((idx + 1) / toplam_cizim)
                     
             status.update(label="Adım 2 Tamamlandı!", state="complete", expanded=False)
 
