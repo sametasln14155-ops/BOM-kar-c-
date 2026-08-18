@@ -72,7 +72,7 @@ def sayfa_resme_cevir(sayfa, dpi=200):
 
 def pdf_analiz_et(resim, prompt, sema):
     response = client.models.generate_content(
-        model='gemini-3.6-flash',
+        model='gemini-3.7-flash',
         contents=[resim, prompt],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
