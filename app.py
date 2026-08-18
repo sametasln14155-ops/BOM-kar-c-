@@ -57,7 +57,7 @@ def bom_pdf_oku(client, resim):
     - Adetleri 'Quantity' veya 'Piece' sütunundan al.
     """
     response = client.models.generate_content(
-        model='gemini-2.5-flash', # Model ismi güncellendi
+        model='gemini-3.6-flash', # Model ismi güncellendi
         contents=[resim, prompt],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -75,7 +75,7 @@ def cizim_pdf_oku(client, resim):
     3. Boyut stringlerini En, Boy, Kalınlık (t) ve Çap (Ø) olarak sayısal (float) ayrıştır.
     """
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         contents=[resim, prompt],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
